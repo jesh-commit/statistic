@@ -56,7 +56,7 @@ export default function App() {
     setBusy(true);
     try {
       const form=new FormData(); form.append('file',selected);
-      const apiBase=(import.meta.env.VITE_API_BASE_URL||'').replace(/\/$/,'');
+      const apiBase=(import.meta.env.VITE_API_BASE_URL||'https://statistic-api.onrender.com').replace(/\/$/,'');
       const response=await fetch(`${apiBase}/api/preview`,{method:'POST',body:form});
       const contentType=response.headers.get('content-type')||'';
       if(!contentType.includes('application/json')) {
