@@ -7,7 +7,15 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="Statistic Report API", version="0.1.0")
-app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+DEFAULT_ORIGINS = ["http://localhost:5173", "https://statistic-2su.pages.dev"]
+configured_origins = [origin.strip() for origin in __import__("os").environ.get("CORS_ORIGINS", "").split(",") if origin.strip()]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=configured_origins or DEFAULT_ORIGINS,
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["*"],
+)
 ALLOWED_SUFFIXES = {".xlsb", ".xlsx", ".xls"}
 PREVIEW_LIMIT = 8
 
