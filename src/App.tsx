@@ -10,6 +10,7 @@ const defaultProfiles: ReportProfile[] = [
   { id:'export', name:'Exportation', prefix:'EX' }
 ];
 const outputColumns = ['Date','MONTH','N°','numéro de suivi d’origine','Port name','Importation et export','Truck Type','Plate No.','Plate No.2','Plate No.3','Company Name','PREPAID COMPANY','Origin','Cargo Name','Entry Time','Exit Time','Sub-Total of Border Post','Entry card','Mairie-Sakania','DRHKAT Fee','Kanyaka Parking','Sub-Total of Parking','Total','Remark'];
+type ProfileMappings = Record<string, Record<string, string>>;
 
 export default function App() {
   const inputRef=useRef<HTMLInputElement>(null);
@@ -25,6 +26,8 @@ export default function App() {
   const [customColumns,setCustomColumns]=useState<string[]>(outputColumns);
   const [newColumn,setNewColumn]=useState('');
   const [showColumnEditor,setShowColumnEditor]=useState(false);
+  const [columnMappings,setColumnMappings]=useState<ProfileMappings>({});
+  const [mappingNotice,setMappingNotice]=useState('');
 
   useEffect(()=>{
     try {
@@ -34,6 +37,13 @@ export default function App() {
         if(Array.isArray(parsed) && parsed.some(p=>p.id==='import') && parsed.some(p=>p.id==='export')) setProfiles(parsed);
       }
     } catch { /* Ignore invalid local preferences and keep defaults. */ }
+    try {
+      const savedMappings=localStorage.getItem('statistic-column-mappings');
+      if(savedMappings) {
+        const parsed=JSON.parse(savedMappings) as ProfileMappings;
+        if(parsed && typeof parsed==='object') setColumnMappings(parsed);
+      }
+    } catch { /* Ignore invalid saved mappings. */ }
     try {
       const savedColumns=localStorage.getItem('statistic-output-columns');
       if(savedColumns) {
@@ -65,6 +75,14 @@ export default function App() {
       const body=await response.json();
       if(!response.ok)throw new Error(body.detail||'Impossible de lire ce fichier.');
       setPreview(body as PreviewResult);
+      setMappingNotice('');
+      setColumnMappings(current=>{
+        const existing=current[activeProfileId]||{};
+        const validSources=new Set((body as PreviewResult).columns);
+        const cleaned:Record<string,string>={};
+        for(const target of customColumns) cleaned[target]=validSources.has(existing[target])?existing[target]:'';
+        return {...current,[activeProfileId]:cleaned};
+      });
     } catch(e) {
       if(e instanceof TypeError) setError('Impossible de joindre le service de traitement Excel. Vérifie que le backend API est déployé et accessible.');
       else setError(e instanceof Error?e.message:'Erreur inattendue pendant la lecture du fichier.');
@@ -92,6 +110,20 @@ export default function App() {
     if(profile.id==='import'||profile.id==='export') return;
     setProfiles(current=>current.filter(p=>p.id!==profile.id));
     if(activeProfileId===profile.id) setActiveProfileId('import');
+  }
+
+  function updateColumnMapping(target:string,source:string) {
+    setColumnMappings(current=>({...current,[activeProfileId]:{...(current[activeProfileId]||{}),[target]:source}}));
+    setMappingNotice('Modifications non enregistrées.');
+  }
+
+  function saveColumnMappings() {
+    try {
+      localStorage.setItem('statistic-column-mappings',JSON.stringify(columnMappings));
+      setMappingNotice(`Correspondance enregistrée pour le profil « ${activeProfile.name} » sur cet appareil.`);
+    } catch {
+      setMappingNotice('Enregistrement impossible dans ce navigateur.');
+    }
   }
 
   function addColumn() {
@@ -156,6 +188,13 @@ export default function App() {
       </section>
 
       {preview&&<section className="preview-card"><div className="card-heading"><div className="heading-with-icon"><div className="card-icon"><Table2 size={18}/></div><div><h3>Aperçu du fichier importé</h3><p>{preview.filename} · {preview.columns.length} colonnes source · {preview.row_count.toLocaleString('fr-FR')} lignes</p></div></div><span className="step-pill">APERÇU</span></div>{preview.warnings.length>0&&<div className="alert warning">{preview.warnings.map((w,i)=><div key={i}>{w}</div>)}</div>}<div className="table-wrap"><table><thead><tr>{preview.columns.map((col,i)=><th key={i}>{col}</th>)}</tr></thead><tbody>{preview.rows.slice(0,8).map((row,i)=><tr key={i}>{preview.columns.map((col,j)=><td key={j}>{String(row[col]??'')}</td>)}</tr>)}</tbody></table></div><div className="preview-note"><ShieldCheck size={15}/>Aperçu limité aux 8 premières lignes. Aucune donnée source n’est modifiée.</div></section>}
+
+      {preview&&<section className="target-card mapping-card">
+        <div className="card-heading"><div className="heading-with-icon"><div className="card-icon"><Settings2 size={18}/></div><div><h3>Correspondance des colonnes</h3><p>Associez chaque champ du rapport final à la colonne correspondante du fichier source pour le profil actif : {activeProfile.name}.</p></div></div><span className="column-count">{customColumns.length} CHAMPS CIBLES</span></div>
+        <div className="mapping-table-wrap"><table className="mapping-table"><thead><tr><th>Champ du rapport final</th><th>Colonne du fichier source</th></tr></thead><tbody>{customColumns.map((target,index)=><tr key={target}><td><span className="mapping-index">{String(index+1).padStart(2,'0')}</span>{target}</td><td><select aria-label={`Colonne source pour ${target}`} value={columnMappings[activeProfileId]?.[target]||''} onChange={e=>updateColumnMapping(target,e.target.value)}><option value="">— Choisir une colonne source —</option>{preview.columns.map(source=><option key={source} value={source}>{source}</option>)}</select></td></tr>)}</tbody></table></div>
+        <div className="mapping-footer"><span className={mappingNotice.startsWith('Correspondance enregistrée')?'mapping-saved':''}>{mappingNotice||'La correspondance est propre à chaque onglet de rapport.'}</span><button type="button" className="primary-button" onClick={saveColumnMappings}><CheckCircle2 size={15}/> Enregistrer la correspondance</button></div>
+        <div className="notice"><ShieldCheck size={16}/><span>Les correspondances enregistrées sont conservées dans ce navigateur et séparées par profil (Importation, Exportation ou onglet personnalisé). Elles ne déclenchent pas encore le calcul ni l’export : ces règles seront raccordées au moteur de génération du rapport.</span></div>
+      </section>}
 
       <section className="target-card">
         <div className="card-heading"><div className="heading-with-icon"><div className="card-icon"><Settings2 size={18}/></div><div><h3>Structure cible du rapport</h3><p>Adaptez les champs de sortie à la structure attendue pour ce type de rapport.</p></div></div><span className="column-count">{customColumns.length} CHAMPS</span></div>
