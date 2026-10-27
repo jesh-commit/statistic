@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { Activity, ArrowRight, CheckCircle2, FileSpreadsheet, FileUp, ShieldCheck, Table2, UploadCloud } from 'lucide-react';
 
 type PreviewResult = { filename:string; columns:string[]; rows:Record<string,unknown>[]; row_count:number; warnings:string[] };
-const outputColumns = ['Date','MONTH','N°','numéro de suivi d’origine','Port name','Importation et export','Truck Type','Plate No.','Plate No.2','Plate No.3','Company Name','PREPAID COMPANY','Origin','Cargo Name','Entry Time','Exit Time','Sub-Total of Border Post','Entry card','Mairie-Sakania','DRHKAT Fee','Kanyaka Parking','Sub-Total of Parking','Total','Remark'];
+const sites = ['SAKANIA', 'MOKAMBO', 'MOKAMBO2'] as const;\ntype Site = typeof sites[number];\ntype ReportType = 'Import' | 'Export';\nconst outputColumns = ['Date','MONTH','N°','numéro de suivi d’origine','Port name','Importation et export','Truck Type','Plate No.','Plate No.2','Plate No.3','Company Name','PREPAID COMPANY','Origin','Cargo Name','Entry Time','Exit Time','Sub-Total of Border Post','Entry card','Mairie-Sakania','DRHKAT Fee','Kanyaka Parking','Sub-Total of Parking','Total','Remark'];
 
 export default function App() {
   const inputRef=useRef<HTMLInputElement>(null);
@@ -10,6 +10,12 @@ export default function App() {
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState('');
   const [preview,setPreview]=useState<PreviewResult|null>(null);
+  const [site,setSite]=useState<Site>('SAKANIA');
+  const [reportType,setReportType]=useState<ReportType>('Import');
+  const today = new Date();
+  const two = (n:number) => String(n).padStart(2,'0');
+  const numberPrefix = reportType === 'Import' ? 'IM' : 'EX';
+  const numberExample = `${numberPrefix}-${two(today.getFullYear()%100)}-${two(today.getMonth()+1)}-${two(today.getDate())}-001`;
 
   async function inspectFile(selected:File|null) {
     setFile(selected); setError(''); setPreview(null); if(!selected)return;
@@ -44,7 +50,15 @@ export default function App() {
     </aside>
     <section className="workspace">
       <header className="topbar"><div><div className="breadcrumb">Accueil <span>/</span> Rapports <span>/</span> Importation</div><h1>Importation d’un rapport</h1></div><div className="topbar-badge"><span className="status-dot"/>{preview?'Fichier analysé':file?'Fichier sélectionné':'Aucun rapport chargé'}</div></header>
-      <section className="intro"><div><div className="section-kicker">TRAITEMENT DES DONNÉES</div><h2>Importer un fichier source</h2><p>Sélectionnez le rapport journalier du poste frontalier. Le fichier d’origine reste intact ; une copie temporaire est utilisée pour l’analyse.</p></div></section>
+      <section className="intro"><div><div className="section-kicker">TRAITEMENT DES DONNÉES</div><h2>Importer un fichier source</h2><p>Sélectionnez le poste et le type d’opération avant de charger le rapport. Le fichier d’origine reste intact.</p></div></section>
+      <section className="report-context">
+        <div className="context-heading"><div><strong>Poste frontalier</strong><small>Choisissez l’espace de travail</small></div><div className="site-tabs" role="tablist" aria-label="Poste frontalier">
+          {sites.map(item=><button key={item} type="button" role="tab" aria-selected={site===item} className={site===item?'site-tab selected':'site-tab'} onClick={()=>{setSite(item);setFile(null);setPreview(null);setError('');}}>{item}</button>)}
+        </div></div>
+        <div className="context-bottom"><div><strong>Type d’opération</strong><div className="operation-tabs" role="tablist" aria-label="Type de rapport">
+          {(['Import','Export'] as ReportType[]).map(item=><button key={item} type="button" role="tab" aria-selected={reportType===item} className={reportType===item?'operation-tab selected':'operation-tab'} onClick={()=>{setReportType(item);setFile(null);setPreview(null);setError('');}}>{item==='Import'?'Importation':'Exportation'}</button>)}
+        </div></div><div className="number-preview"><span>Format du numéro d’origine</span><strong>{numberExample}</strong><small>Série séparée par poste, opération et date</small></div></div>
+      </section>
       <nav className="workflow-strip" aria-label="Étapes du traitement">
         <div className="workflow-step current"><span>1</span><div><strong>Importation</strong><small>Choisir le fichier source</small></div></div>
         <div className="workflow-step"><span>2</span><div><strong>Correspondance</strong><small>Associer les colonnes</small></div></div>
@@ -52,7 +66,7 @@ export default function App() {
         <div className="workflow-step"><span>4</span><div><strong>Export</strong><small>Produire le rapport final</small></div></div>
       </nav>
       <section className="upload-card">
-        <div className="card-heading"><div><h3>Fichier source</h3><p>Formats acceptés : XLSB, XLSX et XLS</p></div><span className="step-pill">SOURCE</span></div>
+        <div className="card-heading"><div><h3>Fichier source — {site} / {reportType==='Import'?'Importation':'Exportation'}</h3><p>Formats acceptés : XLSB, XLSX et XLS</p></div><span className="step-pill">SOURCE</span></div>
         <button className="dropzone" onClick={()=>inputRef.current?.click()} disabled={busy}><div className="upload-icon">{busy?<Activity className="spin" size={25}/>:<UploadCloud size={25}/>}</div><strong>{busy?'Analyse du fichier en cours…':file?file.name:'Clique ici pour sélectionner un fichier'}</strong><span>{file&&preview?preview.row_count.toLocaleString('fr-FR')+' lignes détectées':'Le fichier original ne sera jamais modifié.'}</span><span className="choose-file"><FileUp size={16}/>{file?'Choisir un autre fichier':'Parcourir les fichiers'}</span></button>
         <input ref={inputRef} className="hidden-input" type="file" accept=".xlsb,.xlsx,.xls" onChange={e=>void inspectFile(e.target.files?.[0]??null)}/>
         {error&&<div className="alert error">{error}</div>}
