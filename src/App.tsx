@@ -17,7 +17,8 @@ export default function App() {
     setBusy(true);
     try {
       const form=new FormData(); form.append('file',selected);
-      const response=await fetch('/api/preview',{method:'POST',body:form});
+      const apiBase=(import.meta.env.VITE_API_BASE_URL||'').replace(/\\/$/,'');
+      const response=await fetch(`${apiBase}/api/preview`,{method:'POST',body:form});
       const contentType=response.headers.get('content-type')||'';
       if(!contentType.includes('application/json')) {
         throw new Error('Le service de traitement Excel n’est pas encore connecté au site. Le fichier n’a pas été traité. Le backend doit être déployé et relié à cette application.');
