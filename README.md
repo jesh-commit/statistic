@@ -9,3 +9,7 @@ Importer des fichiers source Excel (`.xlsb`, `.xlsx`, `.xls`), vérifier et mapp
 ## Statut
 
 Initialisation du projet. Les règles métier détaillées et les calculs seront confirmés avant leur implémentation.
+
+## Frontend build
+
+Le frontend utilise React, TypeScript et Vite. Les déclarations TypeScript React (`@types/react` et `@types/react-dom`) sont requises pour la compilation et sont déclarées dans `devDependencies`.
