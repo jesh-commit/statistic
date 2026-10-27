@@ -18,10 +18,17 @@ export default function App() {
     try {
       const form=new FormData(); form.append('file',selected);
       const response=await fetch('/api/preview',{method:'POST',body:form});
+      const contentType=response.headers.get('content-type')||'';
+      if(!contentType.includes('application/json')) {
+        throw new Error('Le service de traitement Excel n’est pas encore connecté au site. Le fichier n’a pas été traité. Le backend doit être déployé et relié à cette application.');
+      }
       const body=await response.json();
       if(!response.ok)throw new Error(body.detail||'Impossible de lire ce fichier.');
       setPreview(body as PreviewResult);
-    } catch(e) { setError(e instanceof Error?e.message:'Erreur inattendue. Vérifie que le serveur API est démarré.'); }
+    } catch(e) {
+      if(e instanceof TypeError) setError('Impossible de joindre le service de traitement Excel. Vérifie que le backend API est déployé et accessible.');
+      else setError(e instanceof Error?e.message:'Erreur inattendue pendant la lecture du fichier.');
+    }
     finally {setBusy(false);}
   }
 
