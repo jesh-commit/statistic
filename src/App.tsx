@@ -2,7 +2,10 @@ import { useRef, useState } from 'react';
 import { Activity, ArrowRight, CheckCircle2, FileSpreadsheet, FileUp, ShieldCheck, Table2, UploadCloud } from 'lucide-react';
 
 type PreviewResult = { filename:string; columns:string[]; rows:Record<string,unknown>[]; row_count:number; warnings:string[] };
-const sites = ['SAKANIA', 'MOKAMBO', 'MOKAMBO2'] as const;\ntype Site = typeof sites[number];\ntype ReportType = 'Import' | 'Export';\nconst outputColumns = ['Date','MONTH','N°','numéro de suivi d’origine','Port name','Importation et export','Truck Type','Plate No.','Plate No.2','Plate No.3','Company Name','PREPAID COMPANY','Origin','Cargo Name','Entry Time','Exit Time','Sub-Total of Border Post','Entry card','Mairie-Sakania','DRHKAT Fee','Kanyaka Parking','Sub-Total of Parking','Total','Remark'];
+const sites = ['SAKANIA', 'MOKAMBO', 'MOKAMBO2'] as const;
+type Site = typeof sites[number];
+type ReportType = 'Import' | 'Export';
+const outputColumns = ['Date','MONTH','N°','numéro de suivi d’origine','Port name','Importation et export','Truck Type','Plate No.','Plate No.2','Plate No.3','Company Name','PREPAID COMPANY','Origin','Cargo Name','Entry Time','Exit Time','Sub-Total of Border Post','Entry card','Mairie-Sakania','DRHKAT Fee','Kanyaka Parking','Sub-Total of Parking','Total','Remark'];
 
 export default function App() {
   const inputRef=useRef<HTMLInputElement>(null);
@@ -23,7 +26,7 @@ export default function App() {
     setBusy(true);
     try {
       const form=new FormData(); form.append('file',selected);
-      const apiBase=(import.meta.env.VITE_API_BASE_URL||'').replace(/\\/$/,'');
+      const apiBase=(import.meta.env.VITE_API_BASE_URL||'').replace(/\/$/,'');
       const response=await fetch(`${apiBase}/api/preview`,{method:'POST',body:form});
       const contentType=response.headers.get('content-type')||'';
       if(!contentType.includes('application/json')) {
