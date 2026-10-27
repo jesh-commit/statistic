@@ -13,3 +13,7 @@ Initialisation du projet. Les règles métier détaillées et les calculs seront
 ## Frontend build
 
 Le frontend utilise React, TypeScript et Vite. Les déclarations TypeScript React (`@types/react` et `@types/react-dom`) sont requises pour la compilation et sont déclarées dans `devDependencies`.
+
+## Déploiement
+
+La branche `main` contient le correctif de syntaxe TypeScript des onglets de poste et d’opération. Cloudflare Pages doit construire le commit le plus récent de `main`.
